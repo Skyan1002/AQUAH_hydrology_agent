@@ -488,7 +488,7 @@ def final_report_writer(args, crest_args, agents_config, tasks_config):
     
 
     extra = ['--pdf-engine=xelatex',
-         '--variable', 'mainfont=Times New Roman']
+         '--variable', 'mainfont=Latin Modern Roman']
     output_pdf_path = f'Hydro_Report_{args.basin_name}.pdf'
     output = pypandoc.convert_file('Hydro_Report.md', 'pdf', outputfile=output_pdf_path,extra_args=extra)
     print(f"PDF report saved to {os.path.abspath(output_pdf_path)}")
@@ -519,8 +519,8 @@ def aquah_run(gpt_key: str):
     # Assign loaded configurations to specific variables
     agents_config = configs['agents']
     tasks_config = configs['tasks']
-    # input_text = input("Please enter the simulation information (e.g., 'I want to simulate basin Fort Cobb, from 2022 June to July'): ")
-    input_text = 'San Antonio Rv at San Antonio, TX,  20230420 to 20230501'
+    input_text = input("Please enter the simulation information (e.g., 'I want to simulate basin Fort Cobb, from 2022 June to July'): ")
+    # input_text = 'San Antonio Rv at San Antonio, TX,  20230420 to 20230501'
     print('User input: ', input_text)
     print('\n\033[1;31m\033[1m------------------------------------------------')
     print('Step 1: Determine Location and Time Period')
@@ -617,7 +617,7 @@ def aquah_run(gpt_key: str):
     print('Step 4: Download Precipitation and Potential Evapotranspiration Data')
     print('--------------------------------------------------------\033[0m\033[0m\n')
     # Input data download
-    data_download_flag = False
+    data_download_flag = True
     if data_download_flag:
         import importlib
         import tools.precipitation_processor
@@ -656,24 +656,57 @@ def aquah_run(gpt_key: str):
     tools.crest_run.crest_run(args,crest_args)
 
 
+    # import subprocess
+
+
+    # # Construct the full path to ef5_64.exe (assumed to be in the current working directory)
+    # ef5_exe_path = os.path.join(os.getcwd(), "ef5_64.exe")
+
+    # # Check if the file exists
+    # if not os.path.isfile(ef5_exe_path):
+    #     print(f"{ef5_exe_path} not found. Please make sure ef5_64.exe is in the current folder.")
+    # else:
+    #     try:
+    #         # Run ef5_64.exe and wait for it to finish
+    #         result = subprocess.run([ef5_exe_path], check=True)
+    #         print("ef5_64.exe ran successfully.")
+    #     except subprocess.CalledProcessError as e:
+    #         print(f"Error running ef5_64.exe, return code: {e.returncode}")
+    #     except Exception as e:
+    #         print(f"An exception occurred while running ef5_64.exe: {e}")
+    # Run EF5 model
+    import platform
     import subprocess
 
-
-    # Construct the full path to ef5_64.exe (assumed to be in the current working directory)
-    ef5_exe_path = os.path.join(os.getcwd(), "ef5_64.exe")
-
-    # Check if the file exists
-    if not os.path.isfile(ef5_exe_path):
-        print(f"{ef5_exe_path} not found. Please make sure ef5_64.exe is in the current folder.")
+    if platform.system() == 'Windows':
+        # Windows path
+        ef5_exe_path = os.path.join(os.getcwd(), "ef5_64.exe")
+        
+        if not os.path.isfile(ef5_exe_path):
+            print(f"{ef5_exe_path} not found. Please make sure ef5_64.exe is in the current folder.")
+        else:
+            try:
+                result = subprocess.run([ef5_exe_path], check=True)
+                print("ef5_64.exe ran successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error running ef5_64.exe, return code: {e.returncode}")
+            except Exception as e:
+                print(f"An exception occurred while running ef5_64.exe: {e}")
     else:
-        try:
-            # Run ef5_64.exe and wait for it to finish
-            result = subprocess.run([ef5_exe_path], check=True)
-            print("ef5_64.exe ran successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Error running ef5_64.exe, return code: {e.returncode}")
-        except Exception as e:
-            print(f"An exception occurred while running ef5_64.exe: {e}")
+        # Linux path 
+        ef5_path = "./EF5/bin/ef5"
+        control_path = "control.txt"
+        
+        if not os.path.isfile(ef5_path):
+            print(f"{ef5_path} not found. Please make sure EF5 binary exists.")
+        else:
+            try:
+                result = subprocess.run([ef5_path, control_path], check=True)
+                print("EF5 ran successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error running EF5, return code: {e.returncode}")
+            except Exception as e:
+                print(f"An exception occurred while running EF5: {e}")
 
 
     visualize_model_results(ts_file=f'./CREST_output/ts.{args.gauge_id}.crest.csv',figure_path=args.figure_path)
