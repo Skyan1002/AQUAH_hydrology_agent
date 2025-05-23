@@ -1,0 +1,71 @@
+parse_location:
+  description: >
+    Extract the basin name from the natural language input:
+    {input_text}
+    
+    Your task is to identify and validate the basin name mentioned
+    in the text. Ensure the name is correctly formatted and matches
+    known basin names.
+  expected_output: >
+    The validated basin name as a string.
+
+parse_time_period:
+  description: >
+    Extract the time period from the natural language input:
+    {input_text}
+    
+    Your task is to identify the start and end dates mentioned
+    in the text and convert them to datetime objects.
+  expected_output: >
+    A list containing two datetime objects: [start_date, end_date]
+    representing the simulation period.
+
+get_basin_center:
+  description: >
+    Given the basin name: '{basin_name}',
+    output the approximate latitude and longitude of the center of this basin as a Python tuple (lat, lon).
+    If you are unsure, make your best estimate based on common knowledge of major basins.
+  expected_output: >
+    A tuple of floats: (latitude, longitude)
+
+write_report:
+  description: >
+    Using the provided simulation metadata and results:
+    - summary: {summary} (simulation summary)
+    - report_for_figures_md: {report_for_figures_md} (analysis report for important figures)
+    Generate a complete Markdown report with:
+    1. Title and Basin Information
+       - Level-1 heading with basin name
+       - Basin & gauge map section
+       - Fundamental basin data
+       - Brief introduction of the basin: {basin_name}, 
+    
+    2. Analysis Sections
+       - Simulation vs Observation comparison
+       - Model Performance Metrics
+       - CREST Parameters
+       - Conclusion/Discussion
+    
+    3. Required Images (using ![]() syntax)
+       - basin_map_with_gauges.png
+       - basic_data.png 
+       - results.png
+       This figure should be included in the report, the path is {figure_path}
+    
+    4. Data Tables
+       - all Run Arguments (basin details)
+       - Performance Metrics
+       - all CREST Parameters
+       - Format tables vertically with variables listed top-to-bottom:
+
+    5. Discussion Points
+       - Model performance evaluation
+       - Warmup period considerations if bias < -90%
+       - Recommendations for simulation period and next steps
+    
+    Format as publication-ready Markdown with proper headings,
+    image sizing, and layout.
+  expected_output: >
+    A complete, properly formatted Markdown report ready for
+    conversion to PDF via pypandoc. I will use the output to generate a PDF report.
+    Do not include any text after the report, just the report content.
