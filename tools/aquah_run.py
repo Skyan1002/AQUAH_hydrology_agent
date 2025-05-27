@@ -181,162 +181,10 @@ def select_outlet_gauge_by_image(image_path: str, basic_data_image_path: str = N
 
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-def visualize_model_results(ts_file='../Output/ts.07325850.crest.csv', figure_path=None):
-    """
-    Visualize hydrological model results comparing simulated vs observed discharge.
-    
-    Parameters:
-    -----------
-    ts_file : str, optional
-        Path to the time series CSV file with model results
-    figure_path : str, optional
-        Directory to save the plot image as 'results.png' (default: None, plot is not saved)
-    """
-    
-    # Check if file exists
-    if not os.path.exists(ts_file):
-        print(f"Error: Results file not found at {ts_file}")
-        return False
-        
-    # Read the CSV file
-    try:
-        df = pd.read_csv(ts_file)
-    except Exception as e:
-        print(f"Error reading results file: {str(e)}")
-        return False
-    
-    print(f"Visualizing model results from: {os.path.abspath(ts_file)}")
-    
-    # Create the figure with two y-axes
-    fig, ax1 = plt.subplots(figsize=(12, 6))
-    ax2 = ax1.twinx()
-
-    # Plot discharge on left y-axis
-    ax1.plot(df['Time'], df['Discharge(m^3 s^-1)'], label='Simulated', linewidth=1)
-    ax1.plot(df['Time'], df['Observed(m^3 s^-1)'], label='Observed', linewidth=1)
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('Discharge (m³/s)')
-    # Set y-axis limit to 2.1 times the maximum observed discharge value
-    max_observed = df['Observed(m^3 s^-1)'].max()
-    ax1.set_ylim(0, max_observed * 2.1)
-
-    # Plot precipitation on right y-axis (inverted)
-    ax2.plot(df['Time'], df['Precip(mm h^-1)'], color='blue', alpha=0.3, label='Precipitation')
-    ax2.set_ylabel('Precipitation (mm/h)')
-    ax2.invert_yaxis()  # Invert the y-axis so 0 is at top
-    # Set y-axis limit to 2.1 times the maximum precipitation value (inverted)
-    max_precip = df['Precip(mm h^-1)'].max()
-    ax2.set_ylim(max_precip * 2.1, 0)  # Set inverted y-axis limits
-
-    # Add legends
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
-
-    # Set title
-    plt.title('Simulated vs Observed Discharge with Precipitation')
-
-    # Set x-axis limits to first and last time points
-    ax1.set_xlim(df['Time'].iloc[0], df['Time'].iloc[-1])
-
-    # Reduce x-axis density and rotate labels
-    step = 24  # Show every 24th tick
-    ax1.set_xticks(range(0, len(df), step))
-    ax1.set_xticklabels([t.split()[0] for t in df['Time'][::step]], rotation=45, ha='right')
-
-    # Adjust layout to prevent label cutoff
-    plt.tight_layout()
-
-    # Save the plot to figure_path as 'results.png' with dpi=300
-    if figure_path is not None:
-        save_path = os.path.join(figure_path, 'results.png')
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Plot saved to {os.path.abspath(save_path)}")
-    
-    plt.show()
-
-    
-def evaluate_model_performance(ts_file='../Output/ts.07325850.crest.csv'):
-    """
-    Evaluate hydrological model performance by calculating statistical metrics
-    between simulated and observed discharge.
-    
-    Parameters:
-    -----------
-    ts_file : str, optional
-        Path to the time series CSV file with model results
-        
-    Returns:
-    --------
-    dict: Dictionary containing the calculated performance metrics
-    """
-    # Check if file exists
-    if not os.path.exists(ts_file):
-        print(f"Error: Results file not found at {ts_file}")
-        return None
-        
-    # Read the CSV file
-    try:
-        df = pd.read_csv(ts_file)
-    except Exception as e:
-        print(f"Error reading results file: {str(e)}")
-        return None
-    
-    print(f"Evaluating model performance from: {os.path.abspath(ts_file)}")
-    
-    # Extract simulated and observed discharge
-    sim = df['Discharge(m^3 s^-1)'].values
-    obs = df['Observed(m^3 s^-1)'].values
-    
-    # Remove any rows where either simulated or observed values are NaN
-    valid_indices = ~(np.isnan(sim) | np.isnan(obs))
-    sim = sim[valid_indices]
-    obs = obs[valid_indices]
-    
-    if len(sim) == 0 or len(obs) == 0:
-        print("Error: No valid data points after removing NaN values")
-        return None
-    
-    # Calculate Root Mean Square Error (RMSE)
-    rmse = np.sqrt(np.mean((sim - obs) ** 2))
-    
-    # Calculate Bias (as percentage)
-    bias = np.mean(sim - obs)
-    bias_percent = (bias / np.mean(obs)) * 100
-    
-    # Calculate Correlation Coefficient (CC)
-    cc = np.corrcoef(sim, obs)[0, 1]
-    
-    # Calculate Nash-Sutcliffe Coefficient of Efficiency (NSCE)
-    mean_obs = np.mean(obs)
-    nsce = 1 - (np.sum((sim - obs) ** 2) / np.sum((obs - mean_obs) ** 2))
-    
-    # Create a dictionary with the metrics
-    metrics = {
-        'RMSE': rmse,
-        'Bias': bias,
-        'Bias_percent': bias_percent,
-        'CC': cc,
-        'NSCE': nsce
-    }
-    
-    # Print the metrics
-    print("\nModel Performance Metrics:")
-    print(f"RMSE: {rmse:.4f} m³/s")
-    print(f"Bias: {bias:.4f} m³/s ({bias_percent:.2f}%)")
-    print(f"CC: {cc:.4f}")
-    print(f"NSCE: {nsce:.4f}")
-    
-    return metrics
-
-
 
 
 """
-Takes 3 images (basin_map_with_gauges.png, basic_data.png, results.png) as input,
+Takes 3 images (combined_maps.png, basic_data.png, results.png) as input,
 calls OpenAI Vision model, and returns a structured analysis report (Markdown + JSON).
 """
 
@@ -346,11 +194,10 @@ def file_to_dataurl(path: str) -> str:
         b64 = base64.b64encode(f.read()).decode()
     return f"data:{mime};base64,{b64}"
 
-
 def make_report_for_figures(fig_dir: str, OPENAI_MODEL: str = 'gpt-4o') -> str:
     """Given a figure directory, reads three images and generates a report using LLM, returns a Markdown string."""
     imgs = {
-        "basin":  file_to_dataurl(os.path.join(fig_dir, "basin_map_with_gauges.png")),
+        "basin":  file_to_dataurl(os.path.join(fig_dir, "combined_maps.png")),
         "basic":  file_to_dataurl(os.path.join(fig_dir, "basic_data.png")), 
         "result": file_to_dataurl(os.path.join(fig_dir, "results.png")),
     }
@@ -361,7 +208,7 @@ def make_report_for_figures(fig_dir: str, OPENAI_MODEL: str = 'gpt-4o') -> str:
             "content": (
                 "You are a senior hydrologist writing an internal technical memo.\n"
                 "You will receive three figures in order:\n"
-                "① basin_map_with_gauges → basin outline + all USGS gauges;\n"
+                "① combined_maps → basin outline + all USGS gauges and flow accumulation with gauges;\n"
                 "② basic_data → DEM / FAM / DDM overview of the same basin;\n"
                 "③ results → hydro-simulation result plot (obs, precip, sim curves).\n\n"
                 "Generate a concise **Markdown report** with **three sections**:\n"
@@ -455,7 +302,7 @@ def get_nsce_interpretation(nsce):
     else:
         return "unsatisfactory performance"
 
-def final_report_writer(args, crest_args, agents_config, tasks_config):
+def final_report_writer(args, crest_args, agents_config, tasks_config, iteration_num=0):
     report_writer = Agent(
         role=agents_config['report_writer_agent']['role'],
         goal=agents_config['report_writer_agent']['goal'],
@@ -486,13 +333,167 @@ def final_report_writer(args, crest_args, agents_config, tasks_config):
             report_content = report_content[:-3].strip()
         f.write(report_content)
     
+    # Create report directory if it doesn't exist
+    if not os.path.exists(args.report_path):
+        os.makedirs(args.report_path)
 
     extra = ['--pdf-engine=xelatex',
          '--variable', 'mainfont=Latin Modern Roman']
-    output_pdf_path = f'Hydro_Report_{args.basin_name}.pdf'
+    output_pdf_path = os.path.join(args.report_path, f'Hydro_Report_{args.basin_name.replace(" ", "_")}_{iteration_num:02d}.pdf')
     output = pypandoc.convert_file('Hydro_Report.md', 'pdf', outputfile=output_pdf_path,extra_args=extra)
     print(f"PDF report saved to {os.path.abspath(output_pdf_path)}")
 
+
+# Feedback control
+class DirtyFlags:
+    def __init__(self):
+        self.gauge_id = False
+        self.crest_args = False
+
+import json
+
+def feedback_agent(feedback: str):
+    feedback_parser_agent = Agent(
+        role="Feedback Interpreter",
+        goal="Parse feedback about gauge_id and CREST args and output JSON instructions.",
+        backstory=(
+            "You are an assistant that understands hydrologic-model configuration feedback. "
+            "Given a feedback string, decide whether the user asked to modify gauge_id and/or any CREST arguments. "
+            "Return a JSON dict with keys:\n"
+            "  gauge_id_dirty (bool), gauge_id_new (str or null),\n"
+            "  crest_args_dirty (bool), crest_args_new (dict[str, float]),\n"
+            "  explanation (str)\n"
+            "If a field is not mentioned, keep the *_dirty flag false and *_new null/{}."
+        ),
+        verbose=False  # Set to True to view LLM reasoning logs
+    )
+
+    # Extensible CREST parameter set (converted to lowercase for matching)
+    CREST_PARAMS = {
+        "alpha", "alpha0", "b", "beta", "fc", "grid_on", "im", "isu", "iwu",
+        "ke", "leaki", "th", "under", "wm"
+    }
+    
+    # Let Agent parse feedback and output JSON ------------------
+    feedback_task = Task(
+        description=(
+            "User feedback:\n"
+            "----------------\n"
+            f"{feedback}\n"
+            "----------------\n"
+            "Follow these steps strictly:\n"
+            "1. Inspect the text. If it mentions changing gauge_id, set gauge_id_dirty true and "
+            "extract the integer value they want (gauge_id_new). Otherwise, false/null.\n"
+            "2. For each CREST argument (see list below), if the user requests a change, "
+            "add it to crest_args_new dict (key=param name in lower case, value=float or bool). "
+            "Set crest_args_dirty to true if any changes.\n"
+            f"CREST params list: {sorted(CREST_PARAMS)}\n"
+            "3. Return ONLY the assignment code lines needed to update existing variables dirty, args_new, and crest_args_new. "
+            "These variables are already defined, so only provide modification statements like (gauge_id should be a string remember the ''):\n"
+            "dirty.gauge_id = True\n"
+            "args_new.gauge_id = '12345'\n"
+            "dirty.crest_args = True\n"
+            "crest_args_new.wm = 0.5\n"
+            "If no changes are needed, return an empty string."
+        ),
+        expected_output="One-line JSON string",
+        agent=feedback_parser_agent
+    )
+    crew = Crew(agents=[feedback_parser_agent], tasks=[feedback_task], verbose=False)
+    crew.kickoff()
+
+    # Parse Agent output ------------------------------------
+    raw = feedback_task.output.raw.strip()
+    
+    # Try multiple cleaning strategies to extract valid JSON
+    json_text = None
+    
+    # Strategy 1: Look for JSON object in the raw output
+    json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw, flags=re.S)
+    if json_match:
+        json_text = json_match.group(0)
+    
+    # Strategy 2: Clean markdown code blocks
+    if not json_text:
+        clean = raw
+        clean = re.sub(r'```(?:json)?\s*', '', clean, flags=re.I)  # Remove ```json or ```
+        clean = re.sub(r'```\s*$', '', clean)  # Remove trailing ```
+        clean = clean.strip()
+        
+        # Look for JSON object again
+        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', clean, flags=re.S)
+        if json_match:
+            json_text = json_match.group(0)
+    
+    # Strategy 3: If still no JSON found, try the entire cleaned text
+    if not json_text:
+        json_text = clean
+    
+    # Try to parse JSON with multiple fallback strategies
+    result = None
+    
+    try:
+        result = json.loads(json_text)
+    except json.JSONDecodeError:
+        try:
+            # Try fixing common JSON issues
+            fixed_json = json_text.replace("'", '"')  # Replace single quotes with double quotes
+            fixed_json = re.sub(r'(\w+):', r'"\1":', fixed_json)  # Quote unquoted keys
+            result = json.loads(fixed_json)
+        except json.JSONDecodeError:
+            try:
+                # Try extracting just the content between braces
+                brace_content = re.search(r'\{(.*)\}', json_text, flags=re.S)
+                if brace_content:
+                    content = brace_content.group(1).strip()
+                    # Build a minimal valid JSON
+                    result = {
+                        "gauge_id_dirty": False,
+                        "gauge_id_new": None,
+                        "crest_args_dirty": False,
+                        "crest_args_new": {},
+                        "explanation": f"Parsed from content: {content[:100]}..."
+                    }
+                else:
+                    raise json.JSONDecodeError("No valid JSON structure found", json_text, 0)
+            except:
+                # Final fallback: return default structure
+                print(f"Warning: All JSON parsing strategies failed. Using default structure.\nRaw output: {raw}")
+                result = {
+                    "gauge_id_dirty": False,
+                    "gauge_id_new": None,
+                    "crest_args_dirty": False,
+                    "crest_args_new": {},
+                    "explanation": "Failed to parse feedback, no changes applied."
+                }
+
+
+    result.setdefault("gauge_id_dirty", False)
+    result.setdefault("gauge_id_new", None)
+    result.setdefault("crest_args_dirty", False)
+    result.setdefault("crest_args_new", {})
+    result.setdefault("explanation", "No changes detected.")
+    # Assemble executable code string -------------------------------
+    code_lines = [
+        "",
+
+    ]
+    if result["gauge_id_dirty"]:
+        code_lines += [
+            "dirty.gauge_id = True",
+            f"args_new.gauge_id = '{result['gauge_id_new']}'",
+        ]
+    if result["crest_args_dirty"]:
+        code_lines.append("dirty.crest_args = True")
+        for k, v in result["crest_args_new"].items():
+            # Keep Python syntax for bool values
+            val_repr = str(v).lower() if isinstance(v, bool) else v
+            code_lines.append(f"crest_args_new.{k.lower()} = {val_repr}")
+
+    code_str = "\n".join(code_lines)
+    explanation_str = result["explanation"]
+
+    return code_str, explanation_str
 
 
 # Main
@@ -500,7 +501,7 @@ def aquah_run(gpt_key: str):
     # Warning control
     warnings.filterwarnings('ignore')
     import logging
-    logging.getLogger("opentelemetry.trace").setLevel(logging.ERROR)  # 把这个 logger 的阈值调高
+    logging.getLogger("opentelemetry.trace").setLevel(logging.ERROR)
 
     os.environ['OPENAI_MODEL_NAME'] = 'gpt-4o-mini'
     os.environ['OPENAI_API_KEY'] = gpt_key
@@ -520,7 +521,7 @@ def aquah_run(gpt_key: str):
     agents_config = configs['agents']
     tasks_config = configs['tasks']
     input_text = input("Please enter the simulation information (e.g., 'I want to simulate basin Fort Cobb, from 2022 June to July'): ")
-    # input_text = 'San Antonio Rv at San Antonio, TX,  20230420 to 20230501'
+    # input_text = 'San Antonio Rv at San Antonio, TX,  2023'
     print('User input: ', input_text)
     print('\n\033[1;31m\033[1m------------------------------------------------')
     print('Step 1: Determine Location and Time Period')
@@ -584,6 +585,8 @@ def aquah_run(gpt_key: str):
     args.crest_input_pet_path = 'CREST_input/PET/'
     args.crest_output_path = 'CREST_output'
     args.control_file_path = 'control.txt'
+    args.report_path = 'report'
+    args.time_step = '1d'
 
     # Basin shp and basic data download
     import importlib
@@ -601,7 +604,7 @@ def aquah_run(gpt_key: str):
     os.environ['OPENAI_MODEL_NAME'] = 'gpt-4o'
     OPENAI_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
 
-    basin_map_png = "figures/basin_map_with_gauges.png"   # Change to your image path
+    basin_map_png = "figures/combined_maps.png"   # Change to your image path
     basic_data_png = "figures/basic_data.png"  # Basic data image with DEM, flow accumulation, etc.
     facc_png = os.path.join(args.figure_path, "facc_with_gauges.png")  # Flow accumulation with gauges
     args.gauge_id = select_outlet_gauge_by_image(basin_map_png, basic_data_png, facc_png, OPENAI_MODEL)
@@ -617,7 +620,9 @@ def aquah_run(gpt_key: str):
     print('Step 4: Download Precipitation and Potential Evapotranspiration Data')
     print('--------------------------------------------------------\033[0m\033[0m\n')
     # Input data download
+    data_download_flag = False
     data_download_flag = True
+
     if data_download_flag:
         import importlib
         import tools.precipitation_processor
@@ -655,62 +660,7 @@ def aquah_run(gpt_key: str):
     importlib.reload(tools.crest_run)
     tools.crest_run.crest_run(args,crest_args)
 
-
-    # import subprocess
-
-
-    # # Construct the full path to ef5_64.exe (assumed to be in the current working directory)
-    # ef5_exe_path = os.path.join(os.getcwd(), "ef5_64.exe")
-
-    # # Check if the file exists
-    # if not os.path.isfile(ef5_exe_path):
-    #     print(f"{ef5_exe_path} not found. Please make sure ef5_64.exe is in the current folder.")
-    # else:
-    #     try:
-    #         # Run ef5_64.exe and wait for it to finish
-    #         result = subprocess.run([ef5_exe_path], check=True)
-    #         print("ef5_64.exe ran successfully.")
-    #     except subprocess.CalledProcessError as e:
-    #         print(f"Error running ef5_64.exe, return code: {e.returncode}")
-    #     except Exception as e:
-    #         print(f"An exception occurred while running ef5_64.exe: {e}")
-    # Run EF5 model
-    import platform
-    import subprocess
-
-    if platform.system() == 'Windows':
-        # Windows path
-        ef5_exe_path = os.path.join(os.getcwd(), "ef5_64.exe")
-        
-        if not os.path.isfile(ef5_exe_path):
-            print(f"{ef5_exe_path} not found. Please make sure ef5_64.exe is in the current folder.")
-        else:
-            try:
-                result = subprocess.run([ef5_exe_path], check=True)
-                print("ef5_64.exe ran successfully.")
-            except subprocess.CalledProcessError as e:
-                print(f"Error running ef5_64.exe, return code: {e.returncode}")
-            except Exception as e:
-                print(f"An exception occurred while running ef5_64.exe: {e}")
-    else:
-        # Linux path 
-        ef5_path = "./EF5/bin/ef5"
-        control_path = "control.txt"
-        
-        if not os.path.isfile(ef5_path):
-            print(f"{ef5_path} not found. Please make sure EF5 binary exists.")
-        else:
-            try:
-                result = subprocess.run([ef5_path, control_path], check=True)
-                print("EF5 ran successfully.")
-            except subprocess.CalledProcessError as e:
-                print(f"Error running EF5, return code: {e.returncode}")
-            except Exception as e:
-                print(f"An exception occurred while running EF5: {e}")
-
-
-    visualize_model_results(ts_file=f'./CREST_output/ts.{args.gauge_id}.crest.csv',figure_path=args.figure_path)
-    args.metrics = evaluate_model_performance(ts_file=f'./CREST_output/ts.{args.gauge_id}.crest.csv')
+    
 
 
     print('\n\033[1;31m\033[1m--------------------------------------------------------')
@@ -724,6 +674,71 @@ def aquah_run(gpt_key: str):
     args.summary = generate_simulation_summary(args, crest_args)
 
     final_report_writer(args, crest_args, agents_config, tasks_config)
+
+    # Save simulation arguments to a pickle file for future reference
+    import pickle
+
+    simulation_args = {
+        'args': vars(args),
+        'crest_args': {k: v for k, v in vars(crest_args).items()}
+    }
+    
+    iteration_num = 0
+    args_output_path = os.path.join(args.crest_output_path, f'simulation_args_{iteration_num}.pkl')
+    with open(args_output_path, 'wb') as f:
+        pickle.dump(simulation_args, f)
+    print(f"Saved simulation arguments to: {args_output_path}")
+    
+    
+    # feedback module from user
+    while True:
+        iteration_num += 1
+        print('This is iteration: ', iteration_num)
+        print('Please enter the feedback for the simulation: ')
+        feedback = input("Please enter feedback on the results, or 'q' to quit: ")
+        if feedback == 'q' or feedback == 'Q' or feedback == 'quit' or feedback == 'Quit' or feedback == 'exit' or feedback == 'Exit':
+            break
+        print('User feedback: ', feedback)
+        # Initialize dirty flags
+        dirty = DirtyFlags()
+        code_snippet, explain = feedback_agent(feedback)
+
+        print('Code snippet: ', code_snippet)
+        print('Explain: ', explain)
+        import copy
+        # Copy args to args_new and crest_args to crest_args_new
+        args_new = copy.deepcopy(args)
+        crest_args_new = copy.deepcopy(crest_args)
+        # Execute the generated code snippet
+        exec(code_snippet)
+
+
+        if dirty.gauge_id:
+            args_new.latitude_gauge, args_new.longitude_gauge = tools.gauge_processor.gauge_processor(args_new)
+
+        tools.crest_run.crest_run(args_new,crest_args_new)
+
+        OPENAI_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+        # analysis report for important figures
+        args_new.report_for_figures_md = make_report_for_figures(args_new.figure_path, OPENAI_MODEL)
+        # summary of the simulation, which can be used as prompt for the next step
+        args_new.summary = generate_simulation_summary(args_new, crest_args_new)
+
+        final_report_writer(args_new, crest_args_new, agents_config, tasks_config, iteration_num)
+
+        # Save simulation arguments to a pickle file for future reference
+        import pickle
+
+        simulation_args = {
+            'args': vars(args_new),
+            'crest_args': {k: v for k, v in vars(crest_args_new).items()}
+        }       
+        args_output_path = os.path.join(args_new.crest_output_path, f'simulation_args_{iteration_num}.pkl')
+        with open(args_output_path, 'wb') as f:
+            pickle.dump(simulation_args, f)
+        print(f"Saved simulation arguments to: {args_output_path}")
+        args = copy.deepcopy(args_new)
+        crest_args = copy.deepcopy(crest_args_new)
 
 
 

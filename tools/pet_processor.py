@@ -10,7 +10,7 @@ import numpy as np
 
 def download_pet_data(start_date, end_date, download_folder='../PET_data'):
     """
-    Downloads and extracts USGS PET data for a given date range.
+    Downloads and extracts USGS PET data for a given date range, skipping already downloaded files.
     
     Parameters:
     -----------
@@ -49,25 +49,30 @@ def download_pet_data(start_date, end_date, download_folder='../PET_data'):
             # Define the local save path
             save_path = os.path.join(download_folder, file_name)
             
-            # Download the file
-            try:
-                response = requests.get(file_url)
-                response.raise_for_status()  # Raise an exception for HTTP errors
-                
-                # Save the file
-                with open(save_path, 'wb') as f:
-                    f.write(response.content)
-                
-                # Extract the .tar.gz file
-                with tarfile.open(save_path, 'r:gz') as tar:
-                    tar.extractall(path=download_folder)
-                
-                # Delete the original .tar.gz file to save space
-                os.remove(save_path)
-                
-            except Exception as e:
-                failed_downloads += 1
-                tqdm.write(f"Failed to download: {file_url} - Error: {str(e)[:100]}...")
+            # Check if the file has already been downloaded
+            extracted_file_path = os.path.join(download_folder, f"et{current_date.strftime('%y%m%d')}.bil")
+            if os.path.exists(extracted_file_path):
+                tqdm.write(f"File already exists, skipping download: {extracted_file_path}")
+            else:
+                # Download the file
+                try:
+                    response = requests.get(file_url)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    
+                    # Save the file
+                    with open(save_path, 'wb') as f:
+                        f.write(response.content)
+                    
+                    # Extract the .tar.gz file
+                    with tarfile.open(save_path, 'r:gz') as tar:
+                        tar.extractall(path=download_folder)
+                    
+                    # Delete the original .tar.gz file to save space
+                    os.remove(save_path)
+                    
+                except Exception as e:
+                    failed_downloads += 1
+                    tqdm.write(f"Failed to download: {file_url} - Error: {str(e)[:100]}...")
             
             # Move to the next day
             current_date += timedelta(days=1)

@@ -42,7 +42,15 @@ def download_watershed_shp(latitude, longitude, output_path, level=5):
     output_path : str
         Directory path where output files will be saved
     level : int, default=5
-        WBD level to query (5=HUC8, 4=HUC6, etc.)
+        WBD level to query
+        HUC_LEVEL = {
+            "huc2": 1,
+            "huc4": 2,
+            "huc6": 3,
+            "huc8": 4,
+            "huc10": 5,
+            "huc12": 6
+        }
     
     Returns:
     --------
@@ -97,42 +105,6 @@ def download_watershed_shp(latitude, longitude, output_path, level=5):
 
     return Basin_Area
 
-# def calculate_basin_area(basin_shp_path):
-#     """
-#     Calculate the area of a watershed basin in square kilometers.
-    
-#     Parameters:
-#     -----------
-#     basin_shp_path : str
-#         Path to the watershed basin shapefile
-    
-#     Returns:
-#     --------
-#     float
-#         Area of the basin in square kilometers
-#     """
-#     # Load the watershed shapefile
-#     gdf = gpd.read_file(basin_shp_path)
-    
-#     # Ensure the GeoDataFrame is in a projected CRS for accurate area calculation
-#     # If it's in geographic coordinates (like EPSG:4326), reproject to a suitable projected CRS
-#     if gdf.crs.is_geographic:
-#         # Get the UTM zone for the centroid of the basin for accurate area calculation
-#         centroid = gdf.geometry.unary_union.centroid
-#         utm_zone = int(((centroid.x + 180) / 6) % 60) + 1
-#         hemisphere = 'north' if centroid.y >= 0 else 'south'
-#         utm_epsg = 32600 + utm_zone if hemisphere == 'north' else 32700 + utm_zone
-        
-#         # Reproject to the appropriate UTM zone
-#         gdf = gdf.to_crs(epsg=utm_epsg)
-    
-#     # Calculate area in square meters and convert to square kilometers
-#     area_m2 = gdf.geometry.area.sum()
-#     area_km2 = area_m2 / 1_000_000  # Convert m² to km²
-    
-#     print(f"Basin area: {area_km2:.2f} km²")
-    
-#     return area_km2
 
 def plot_watershed_with_gauges(basin_shp_path, gauge_meta_path, figure_path):
     """
@@ -802,6 +774,71 @@ def visualize_flow_accumulation_with_gauges(basin_shp_path, gauge_meta_path, cli
             print("No valid flow accumulation data found (all values <= 0)")
             plt.close(fig)
 
+
+def visualize_figures_basin(figure_path):
+    """
+    Visualize all figures in the given directory and save them as PNG files.
+
+    Parameters:
+    figure_path : str
+        Path to the folder where the output PNG will be saved
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import os
+    
+    # Check if the required PNG files exist
+    basin_map_path = os.path.join(figure_path, 'basin_map_with_gauges.png')
+    facc_map_path = os.path.join(figure_path, 'facc_with_gauges.png')
+    basic_data_path = os.path.join(figure_path, 'basic_data.png')
+    
+    # First, visualize basin_map_with_gauges.png and facc_with_gauges.png side by side
+    if os.path.exists(basin_map_path) and os.path.exists(facc_map_path):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # Load and display basin map
+        basin_img = mpimg.imread(basin_map_path)
+        ax1.imshow(basin_img)
+        ax1.set_title('Basin Map with Gauges', fontsize=12, fontweight='bold')
+        ax1.axis('off')
+        
+        # Load and display flow accumulation map
+        facc_img = mpimg.imread(facc_map_path)
+        ax2.imshow(facc_img)
+        ax2.set_title('Flow Accumulation with Gauges', fontsize=12, fontweight='bold')
+        ax2.axis('off')
+        
+        plt.tight_layout()
+        combined_output_path = os.path.join(figure_path, 'combined_maps.png')
+        plt.savefig(combined_output_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        plt.close(fig)
+        
+        print(f"Combined visualization saved to {combined_output_path}")
+    else:
+        print("Warning: basin_map_with_gauges.png or facc_with_gauges.png not found")
+    
+    # Then, visualize basic_data.png separately
+    if os.path.exists(basic_data_path):
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        
+        # Load and display basic data
+        basic_img = mpimg.imread(basic_data_path)
+        ax.imshow(basic_img)
+        ax.set_title('Basic Data Visualization', fontsize=12, fontweight='bold')
+        ax.axis('off')
+        
+        plt.tight_layout()
+        plt.show()
+        plt.close(fig)
+        
+        print(f"Basic data visualization displayed from {basic_data_path}")
+    else:
+        print("Warning: basic_data.png not found")
+
+
+
+
 def basin_processor(args):
     # print("DEBUG inside basin_processor ->", type(args), vars(args))
     print("Downloading watershed shapefile for basin: ", args.basin_name)
@@ -814,7 +851,7 @@ def basin_processor(args):
     
     # Add the new flow accumulation visualization with gauges
     visualize_flow_accumulation_with_gauges(args.basin_shp_path, args.gauge_meta_path, args.basic_data_clip_path, args.figure_path)
-
+    visualize_figures_basin(args.figure_path)
     return Basin_Area
 
 

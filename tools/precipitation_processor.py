@@ -15,7 +15,7 @@ from rasterio.windows import from_bounds
 
 
 
-def download_mrms_precipitation(start_date, end_date, download_folder='../MRMS_precipitation'):
+def download_mrms_precipitation(start_date, end_date, download_folder='../MRMS_precipitation', time_step='1d'):
     """
     Downloads and extracts MRMS hourly precipitation data for a given date range.
     
@@ -28,89 +28,177 @@ def download_mrms_precipitation(start_date, end_date, download_folder='../MRMS_p
     download_folder : str, optional
         Directory to save the downloaded and extracted files (default: '../MRMS_precipitation')
     """
-    # Create directories if they do not exist
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
-    else:
-        # Clear all files in the destination folder before downloading
-        for file_path in glob.glob(os.path.join(download_folder, '*')):
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        print(f"Cleared all existing files in {download_folder}")
+    # hourly data
+    if time_step == '1h':
+        # Create directories if they do not exist
+        if not os.path.exists(download_folder):
+            os.makedirs(download_folder)
+        else:
+            # Clear all files in the destination folder before downloading
+            for file_path in glob.glob(os.path.join(download_folder, '*')):
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            print(f"Cleared all existing files in {download_folder}")
 
-    # Base URL for data
-    base_url = "https://mtarchive.geol.iastate.edu/"
+        # Base URL for data
+        base_url = "https://mtarchive.geol.iastate.edu/"
 
-    # Calculate total number of hours for progress bar
-    total_hours = int((end_date - start_date).total_seconds() / 3600) + 1
-    
-    print(f"Downloading MRMS precipitation data from {start_date} to {end_date}")
-    print(f"Files will be saved to: {os.path.abspath(download_folder)}")
-    
-    # Date threshold for file format change (October 15, 2020)
-    format_change_date = datetime(2020, 10, 15)
-    
-    # Loop through each hourly timestamp in the date range
-    current_time = start_date
-    failed_downloads = 0
-    
-    with tqdm(total=total_hours, desc="Downloading MRMS data") as pbar:
-        while current_time <= end_date:
-            # Format year, month, day, and hour as strings
-            year_str = current_time.strftime('%Y')
-            month_str = current_time.strftime('%m')
-            day_str = current_time.strftime('%d')
-            hour_str = current_time.strftime('%H')
-            
-            # Determine file format based on date
-            if current_time < format_change_date:
-                # Before October 15, 2020: GaugeCorr format
-                product_dir = "GaugeCorr_QPE_01H"
-                file_prefix = "GaugeCorr_QPE_01H"
-            else:
-                # October 15, 2020 and after: MultiSensor format
-                product_dir = "MultiSensor_QPE_01H_Pass2"
-                file_prefix = "MultiSensor_QPE_01H_Pass2"
-            
-            # Construct the file name
-            file_name = f"{file_prefix}_00.00_{year_str}{month_str}{day_str}-{hour_str}0000.grib2.gz"
-            
-            # Construct the full download URL
-            file_url = f"{base_url}{year_str}/{month_str}/{day_str}/mrms/ncep/{product_dir}/{file_name}"
-                        
-            # Define the full local file path
-            output_file = os.path.join(download_folder, file_name)
-            
-            # Download the file
-            try:
-                response = requests.get(file_url)
-                response.raise_for_status()  # Raise an exception for HTTP errors
+        # Calculate total number of hours for progress bar
+        total_hours = int((end_date - start_date).total_seconds() / 3600) + 1
+        
+        print(f"Downloading MRMS precipitation data from {start_date} to {end_date}")
+        print(f"Files will be saved to: {os.path.abspath(download_folder)}")
+        
+        # Date threshold for file format change (October 15, 2020)
+        format_change_date = datetime(2020, 10, 15)
+        
+        # Loop through each hourly timestamp in the date range
+        current_time = start_date
+        failed_downloads = 0
+        
+        with tqdm(total=total_hours, desc="Downloading MRMS data") as pbar:
+            while current_time <= end_date:
+                # Format year, month, day, and hour as strings
+                year_str = current_time.strftime('%Y')
+                month_str = current_time.strftime('%m')
+                day_str = current_time.strftime('%d')
+                hour_str = current_time.strftime('%H')
                 
-                # Save the compressed file
-                with open(output_file, 'wb') as f:
-                    f.write(response.content)
+                # Determine file format based on date
+                if current_time < format_change_date:
+                    # Before October 15, 2020: GaugeCorr format
+                    product_dir = "GaugeCorr_QPE_01H"
+                    file_prefix = "GaugeCorr_QPE_01H"
+                else:
+                    # October 15, 2020 and after: MultiSensor format
+                    product_dir = "MultiSensor_QPE_01H_Pass2"
+                    file_prefix = "MultiSensor_QPE_01H_Pass2"
                 
-                # Extract the file
-                extracted_file = output_file[:-3]  # Remove .gz extension
-                with gzip.open(output_file, 'rb') as f_in:
-                    with open(extracted_file, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
+                # Construct the file name
+                file_name = f"{file_prefix}_00.00_{year_str}{month_str}{day_str}-{hour_str}0000.grib2.gz"
                 
-                # Delete the original .gz file
-                os.remove(output_file)
-            except Exception as e:
-                failed_downloads += 1
-                tqdm.write(f"Failed to download or extract: {file_url} - Error: {str(e)[:100]}...")
+                # Construct the full download URL
+                file_url = f"{base_url}{year_str}/{month_str}/{day_str}/mrms/ncep/{product_dir}/{file_name}"
+                            
+                # Define the full local file path
+                output_file = os.path.join(download_folder, file_name)
+                
+                # Download the file
+                try:
+                    response = requests.get(file_url)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    
+                    # Save the compressed file
+                    with open(output_file, 'wb') as f:
+                        f.write(response.content)
+                    
+                    # Extract the file
+                    extracted_file = output_file[:-3]  # Remove .gz extension
+                    with gzip.open(output_file, 'rb') as f_in:
+                        with open(extracted_file, 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                    
+                    # Delete the original .gz file
+                    os.remove(output_file)
+                except Exception as e:
+                    failed_downloads += 1
+                    tqdm.write(f"Failed to download or extract: {file_url} - Error: {str(e)[:100]}...")
 
-            # Move to the next hour
-            current_time += timedelta(hours=1)
-            pbar.update(1)
-    
-    print(f"MRMS download complete. Files saved in: {os.path.abspath(download_folder)}")
-    if failed_downloads > 0:
-        print(f"Note: {failed_downloads} files failed to download")
+                # Move to the next hour
+                current_time += timedelta(hours=1)
+                pbar.update(1)
+        
+        print(f"MRMS download complete. Files saved in: {os.path.abspath(download_folder)}")
+        if failed_downloads > 0:
+            print(f"Note: {failed_downloads} files failed to download")
+
+    elif time_step == '1d':
+        # daily data
+        # Create directories if they do not exist
+        if not os.path.exists(download_folder):
+            os.makedirs(download_folder)
+        else:
+            # Clear all files in the destination folder before downloading
+            for file_path in glob.glob(os.path.join(download_folder, '*')):
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            print(f"Cleared all existing files in {download_folder}")
+
+        # Base URL for data
+        base_url = "https://mtarchive.geol.iastate.edu/"
+
+        # Calculate total number of days for progress bar
+        total_days = (end_date - start_date).days + 1
+        
+        print(f"Downloading MRMS daily precipitation data from {start_date} to {end_date}")
+        print(f"Files will be saved to: {os.path.abspath(download_folder)}")
+        
+        # Date threshold for file format change (October 15, 2020)
+        format_change_date = datetime(2020, 10, 15)
+        
+        # Loop through each daily timestamp in the date range
+        current_date = start_date
+        failed_downloads = 0
+        
+        with tqdm(total=total_days, desc="Downloading MRMS daily data") as pbar:
+            while current_date <= end_date:
+                # Format year, month, and day as strings
+                year_str = current_date.strftime('%Y')
+                month_str = current_date.strftime('%m')
+                day_str = current_date.strftime('%d')
+                
+                # Determine file format based on date
+                if current_date < format_change_date:
+                    # Before October 15, 2020: GaugeCorr format
+                    product_dir = "GaugeCorr_QPE_24H"
+                    file_prefix = "GaugeCorr_QPE_24H"
+                else:
+                    # October 15, 2020 and after: MultiSensor format
+                    product_dir = "MultiSensor_QPE_24H_Pass2"
+                    file_prefix = "MultiSensor_QPE_24H_Pass2"
+                
+                # Construct the file name
+                file_name = f"{file_prefix}_00.00_{year_str}{month_str}{day_str}-000000.grib2.gz"
+                
+                # Construct the full download URL
+                file_url = f"{base_url}{year_str}/{month_str}/{day_str}/mrms/ncep/{product_dir}/{file_name}"
+                            
+                # Define the full local file path
+                output_file = os.path.join(download_folder, file_name)
+                
+                # Download the file
+                try:
+                    response = requests.get(file_url)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    
+                    # Save the compressed file
+                    with open(output_file, 'wb') as f:
+                        f.write(response.content)
+                    
+                    # Extract the file
+                    extracted_file = output_file[:-3]  # Remove .gz extension
+                    with gzip.open(output_file, 'rb') as f_in:
+                        with open(extracted_file, 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                    
+                    # Delete the original .gz file
+                    os.remove(output_file)
+                except Exception as e:
+                    failed_downloads += 1
+                    tqdm.write(f"Failed to download or extract: {file_url} - Error: {str(e)[:100]}...")
+
+                # Move to the next day
+                current_date += timedelta(days=1)
+                pbar.update(1)
+        
+        print(f"MRMS daily download complete. Files saved in: {os.path.abspath(download_folder)}")
+        if failed_downloads > 0:
+            print(f"Note: {failed_downloads} files failed to download")
+            
 def _process_single_file(grib_file, output_folder, basin_clipping, expanded_bounds):
     """
     Helper function to process a single GRIB2 file.

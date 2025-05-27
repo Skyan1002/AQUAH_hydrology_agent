@@ -47,7 +47,7 @@ write_report:
        - Conclusion/Discussion
     
     3. Required Images (using ![]() syntax)
-       - basin_map_with_gauges.png
+       - combined_maps.png
        - basic_data.png 
        - results.png
        This figure should be included in the report, the path is {figure_path}
