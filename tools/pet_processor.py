@@ -181,7 +181,7 @@ def process_pet_bil_to_tif(input_folder='../PET_data', output_folder='../CREST_i
         print(f"Note: {failed_files} files failed to process")
 
 def pet_processor(args):
-    download_pet_data(args.time_start, args.time_end, args.pet_data_path, args.num_threads)
+    download_pet_data(args.time_start, args.time_end, args.pet_data_path, args.num_processes)
     process_pet_bil_to_tif(args.pet_data_path, args.crest_input_pet_path)
 
 
